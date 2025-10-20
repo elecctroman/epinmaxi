@@ -1,0 +1,25 @@
+# Redirect all traffic through the public directory where the front controller lives.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Root requests should go straight to the front controller to avoid directory listings.
+    RewriteRule ^$ public/index.php [L]
+
+    # Allow direct access to existing files or directories (e.g., assets and storage exports).
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Otherwise, forward the request into the public directory.
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+</IfModule>
+
+# Disable directory listings for safety.
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
+# Prevent sensitive files from being served if the rewrite module is disabled.
+<FilesMatch "\.(env|sql|lock|json|md)$">
+    Require all denied
+</FilesMatch>
