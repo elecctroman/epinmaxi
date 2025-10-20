@@ -1,0 +1,34 @@
+# Ensure requests run through the public front controller even when mod_rewrite is unavailable.
+DirectoryIndex public/index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Let Apache serve real files or directories (assets, uploads, etc.).
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Forward everything else into /public where index.php handles routing.
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+</IfModule>
+
+# Harden directory browsing regardless of rewrite availability.
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
+# Block sensitive artefacts when mod_authz_core is available (Apache >=2.4).
+<IfModule mod_authz_core.c>
+    <FilesMatch "\.(env|sql|lock|json|md)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# Backward compatible deny rules for older Apache versions.
+<IfModule !mod_authz_core.c>
+    <FilesMatch "\.(env|sql|lock|json|md)$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
