@@ -48,6 +48,13 @@ Kurulum tamamlandığında `sql/seed.sql` dosyasındaki örnek kategoriler, ür�
 - Tema dosyaları `public/assets/css/theme.css` ve `public/assets/js/app.js` altındadır.
 - Yeni controller eklerken `System\Controllers\` ad alanını kullanın ve rotaları `routes.php` dosyasına tanımlayın.
 
+## Özellik Özeti
+- Çok adımlı müşteri akışı: katalog filtreleri, ürün detayları, sepete ekleme, kupon doğrulama, ödeme ve sipariş tamamlama.
+- Mock, PayTR, Iyzico ve Stripe için genişletilebilir ödeme sürücüleri ve imza doğrulamalı webhook uç noktaları.
+- Dijital teslimat motoru E-PIN ve hesap kayıtlarını ödeme başarıyla sonuçlandığında otomatik olarak atar.
+- Hesabım panelinde siparişler, teslimatlar, cüzdan bakiyesi ve destek bileti yönetimi sunulur.
+- AJAX hızlı arama, canlı mini sepet, tema anahtarı, toast bildirimleri ve erişilebilir premium arayüz bileşenleri.
+
 ## SSS
 - **Kurulum tekrar nasıl çalıştırılır?** `install.lock` dosyasını silip tarayıcıdan `install.php`yi açın.
 - **Neden composer yok?** Gereksinim gereği yalnızca native PHP bileşenleri kullanılmaktadır.

@@ -34,6 +34,10 @@ CREATE TABLE IF NOT EXISTS products (
   currency CHAR(3) NOT NULL DEFAULT 'TRY',
   stock_policy ENUM('track_keys','unlimited') NOT NULL DEFAULT 'track_keys',
   description TEXT,
+  tags JSON NULL,
+  highlights JSON NULL,
+  faq JSON NULL,
+  gallery JSON NULL,
   cover_image VARCHAR(255) NULL,
   status ENUM('active','draft','inactive') NOT NULL DEFAULT 'draft',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -76,6 +80,8 @@ CREATE TABLE IF NOT EXISTS coupons (
   max_uses INT DEFAULT 0,
   used_count INT DEFAULT 0,
   min_subtotal DECIMAL(12,2) DEFAULT 0,
+  max_discount DECIMAL(12,2) DEFAULT 0,
+  per_user_limit INT DEFAULT 0,
   starts_at DATETIME NULL,
   ends_at DATETIME NULL,
   status ENUM('active','inactive') NOT NULL DEFAULT 'active'
@@ -110,6 +116,7 @@ CREATE TABLE IF NOT EXISTS orders (
   phone VARCHAR(32) NULL,
   subtotal DECIMAL(12,2) NOT NULL DEFAULT 0,
   discount_total DECIMAL(12,2) NOT NULL DEFAULT 0,
+  tax_total DECIMAL(12,2) NOT NULL DEFAULT 0,
   grand_total DECIMAL(12,2) NOT NULL DEFAULT 0,
   currency CHAR(3) NOT NULL DEFAULT 'TRY',
   payment_method VARCHAR(60) NOT NULL,
@@ -117,10 +124,13 @@ CREATE TABLE IF NOT EXISTS orders (
   status ENUM('new','processing','completed','cancelled') NOT NULL DEFAULT 'new',
   ip VARCHAR(45) NULL,
   user_agent VARCHAR(255) NULL,
+  coupon_code VARCHAR(80) NULL,
+  coupon_discount DECIMAL(12,2) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   paid_at TIMESTAMP NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-  INDEX idx_orders_user (user_id)
+  INDEX idx_orders_user (user_id),
+  INDEX idx_orders_coupon (coupon_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS order_items (
@@ -130,6 +140,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   qty INT NOT NULL,
   unit_price DECIMAL(12,2) NOT NULL,
   total_price DECIMAL(12,2) NOT NULL,
+  delivery_payload JSON NULL,
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

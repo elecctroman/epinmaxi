@@ -8,6 +8,8 @@ $urls = [
     '/',
     '/destek',
     '/blog',
+    '/sepet',
+    '/odeme',
 ];
 
 foreach ($pdo->query('SELECT slug FROM categories ORDER BY sort ASC') as $row) {

@@ -25,4 +25,15 @@ class Controller
         header('Location: ' . $path);
         exit;
     }
+
+    protected function wantsJson(): bool
+    {
+        $requestedWith = $_SERVER['HTTP_X_REQUESTED_WITH'] ?? '';
+        if (strtolower($requestedWith) === 'xmlhttprequest') {
+            return true;
+        }
+
+        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+        return stripos($accept, 'application/json') !== false;
+    }
 }
