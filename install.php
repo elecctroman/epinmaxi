@@ -126,7 +126,7 @@ switch ($step) {
             $twofa = !empty($_POST['twofa']) ? bin2hex(random_bytes(16)) : null;
             $pdo->exec(file_get_contents(__DIR__ . '/sql/schema.sql'));
             $pdo->exec(file_get_contents(__DIR__ . '/sql/seed.sql'));
-            $stmt = $pdo->prepare('INSERT INTO users(role,name,email,phone,password_hash,twofa_secret,status,created_at) VALUES("admin",:name,:email,:phone,:password,:twofa,"active",NOW())');
+            $stmt = $pdo->prepare('INSERT INTO users(role,name,email,phone,password_hash,twofa_secret,permissions_json,status,created_at) VALUES("admin",:name,:email,:phone,:password,:twofa,JSON_ARRAY("*"),"active",NOW())');
             $stmt->execute([
                 'name' => 'Kurucu Admin',
                 'email' => $adminEmail,

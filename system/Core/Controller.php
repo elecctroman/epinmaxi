@@ -36,4 +36,13 @@ class Controller
         $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
         return stripos($accept, 'application/json') !== false;
     }
+
+    protected function authorize(string $ability): void
+    {
+        if (!\System\Core\Gate::allows($ability)) {
+            http_response_code(403);
+            echo 'Bu işlem için yetkiniz bulunmuyor.';
+            exit;
+        }
+    }
 }

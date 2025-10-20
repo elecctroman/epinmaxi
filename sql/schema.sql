@@ -9,7 +9,10 @@ CREATE TABLE IF NOT EXISTS users (
   phone VARCHAR(32) NULL,
   password_hash VARCHAR(255) NOT NULL,
   twofa_secret VARCHAR(64) NULL,
+  permissions_json JSON NULL,
   status ENUM('active','banned') NOT NULL DEFAULT 'active',
+  last_login_at DATETIME NULL,
+  last_login_ip VARCHAR(45) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -209,8 +212,41 @@ CREATE TABLE IF NOT EXISTS logs (
   entity VARCHAR(120) NULL,
   entity_id INT UNSIGNED NULL,
   ip VARCHAR(45) NULL,
+  user_agent VARCHAR(255) NULL,
+  details JSON NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS login_logs (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL,
+  email VARCHAR(160) NOT NULL,
+  ip VARCHAR(45) NULL,
+  user_agent VARCHAR(255) NULL,
+  status ENUM('success','failed') NOT NULL DEFAULT 'failed',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_login_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS blocked_ips (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ip VARCHAR(45) NOT NULL UNIQUE,
+  reason VARCHAR(255) NULL,
+  expires_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS webhook_logs (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  provider VARCHAR(80) NOT NULL,
+  reference VARCHAR(120) NULL,
+  payload JSON NULL,
+  signature_valid TINYINT(1) NOT NULL DEFAULT 0,
+  processed_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_webhook_provider (provider)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS failed_logins (

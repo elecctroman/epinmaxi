@@ -57,7 +57,15 @@ INSERT INTO settings (`key`,`value`) VALUES
 ('app.currency','TRY'),
 ('app.timezone','Europe/Istanbul'),
 ('app.encryption_key','demo-enc-key-32chars!!demo'),
+('app.theme.primary','#6366f1'),
+('app.theme.secondary','#10b981'),
+('app.theme.mode','light'),
 ('payment.default','mock'),
 ('seo.meta_title','E-PIN Premium Dijital Mağaza'),
 ('seo.meta_description','Oyun kodları, lisanslar ve dijital aboneliklerde anında teslimat deneyimi.')
 ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
+
+INSERT INTO users (role,name,email,phone,password_hash,twofa_secret,permissions_json,status,created_at)
+VALUES
+('staff','Destek Personeli','staff@demo.local',NULL,'$2y$12$BzWFuo16wGqvXTtfndpjgO3/e9x.xhnoLdMHCxJq3YeWbAydhk/XS',NULL,JSON_ARRAY('manage-support','manage-orders','manage-keys'),'active',NOW())
+ON DUPLICATE KEY UPDATE status=VALUES(status), permissions_json=VALUES(permissions_json);

@@ -63,4 +63,28 @@ class DigitalDeliveryService
         }
         return $delivered;
     }
+
+    public function releaseKeysByOrderItem(int $orderItemId): int
+    {
+        $stmt = DB::pdo()->prepare('UPDATE product_keys SET status = "unused", order_item_id = NULL, used_at = NULL WHERE order_item_id = :id');
+        $stmt->execute(['id' => $orderItemId]);
+        return $stmt->rowCount();
+    }
+
+    public function releaseAccountsByOrderItem(int $orderItemId): int
+    {
+        $stmt = DB::pdo()->prepare('UPDATE product_accounts SET status = "unused", order_item_id = NULL, used_at = NULL WHERE order_item_id = :id');
+        $stmt->execute(['id' => $orderItemId]);
+        return $stmt->rowCount();
+    }
+
+    public function deliveredPayload(int $orderItemId): array
+    {
+        $payload = DB::query('SELECT delivery_payload FROM order_items WHERE id = :id', ['id' => $orderItemId])->fetchColumn();
+        if (!$payload) {
+            return [];
+        }
+        $decoded = json_decode($payload, true);
+        return is_array($decoded) ? $decoded : [];
+    }
 }

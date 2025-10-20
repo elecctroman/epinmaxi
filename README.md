@@ -54,6 +54,8 @@ Kurulum tamamlandığında `sql/seed.sql` dosyasındaki örnek kategoriler, ür�
 - Dijital teslimat motoru E-PIN ve hesap kayıtlarını ödeme başarıyla sonuçlandığında otomatik olarak atar.
 - Hesabım panelinde siparişler, teslimatlar, cüzdan bakiyesi ve destek bileti yönetimi sunulur.
 - AJAX hızlı arama, canlı mini sepet, tema anahtarı, toast bildirimleri ve erişilebilir premium arayüz bileşenleri.
+- Gelişmiş yönetici paneli: ürün/kategori CRUD, E-PIN & hesap havuzu import/export, sipariş & iade yönetimi, kullanıcı & rol denetimi,
+  kupon ve cüzdan araçları, destek yönetimi, grafik tabanlı raporlar ve audit log kayıtları.
 
 ## SSS
 - **Kurulum tekrar nasıl çalıştırılır?** `install.lock` dosyasını silip tarayıcıdan `install.php`yi açın.

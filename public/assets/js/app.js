@@ -143,4 +143,58 @@
             toast.style.display = 'none';
         }, 3200);
     }
+
+    document.querySelectorAll('canvas[data-chart-line]').forEach((canvas) => {
+        const ctx = canvas.getContext('2d');
+        const data = JSON.parse(canvas.dataset.chartLine || '[]');
+        if (!data.length) {
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText('Grafik verisi bulunamadı.', 20, 40);
+            return;
+        }
+        const values = data.map((item) => Number(item.total || 0));
+        const labels = data.map((item) => item.day);
+        const max = Math.max(...values);
+        const min = Math.min(...values);
+        const padding = 32;
+        const height = canvas.height - padding * 2;
+        const width = canvas.width - padding * 2;
+        ctx.strokeStyle = '#1d4ed8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        values.forEach((value, index) => {
+            const x = padding + (width / (values.length - 1 || 1)) * index;
+            const normalized = max === min ? 0.5 : (value - min) / (max - min);
+            const y = canvas.height - padding - normalized * height;
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        ctx.stroke();
+        ctx.fillStyle = '#0f172a';
+        ctx.font = '12px sans-serif';
+        labels.forEach((label, index) => {
+            const x = padding + (width / (labels.length - 1 || 1)) * index;
+            ctx.fillText(label, x - 20, canvas.height - 4);
+        });
+    });
+
+    const accountTable = document.querySelector('[data-account-table]');
+    const accountPreview = document.querySelector('[data-account-preview]');
+    if (accountTable && accountPreview) {
+        accountTable.querySelectorAll('tr[data-account]').forEach((row) => {
+            row.addEventListener('click', () => {
+                const id = row.dataset.account;
+                fetch(`/admin/hesap-havuzu/${id}`)
+                    .then((res) => res.json())
+                    .then((payload) => {
+                        accountPreview.style.display = 'block';
+                        accountPreview.querySelector('pre').textContent = JSON.stringify(payload, null, 2);
+                    })
+                    .catch(() => showToast('Hesap bilgisi getirilemedi', 'danger'));
+            });
+        });
+    }
 })();
