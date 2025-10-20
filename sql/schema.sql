@@ -1,0 +1,278 @@
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS=0;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  role ENUM('admin','staff','customer') NOT NULL DEFAULT 'customer',
+  name VARCHAR(120) NOT NULL,
+  email VARCHAR(160) NOT NULL UNIQUE,
+  phone VARCHAR(32) NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  twofa_secret VARCHAR(64) NULL,
+  permissions_json JSON NULL,
+  status ENUM('active','banned') NOT NULL DEFAULT 'active',
+  last_login_at DATETIME NULL,
+  last_login_ip VARCHAR(45) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS categories (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  parent_id INT UNSIGNED NULL,
+  name VARCHAR(120) NOT NULL,
+  slug VARCHAR(160) NOT NULL UNIQUE,
+  sort INT DEFAULT 0,
+  FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS products (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  type ENUM('epin','license','account') NOT NULL,
+  title VARCHAR(180) NOT NULL,
+  slug VARCHAR(200) NOT NULL UNIQUE,
+  sku VARCHAR(120) NOT NULL UNIQUE,
+  category_id INT UNSIGNED NULL,
+  price DECIMAL(12,2) NOT NULL,
+  sale_price DECIMAL(12,2) NULL,
+  currency CHAR(3) NOT NULL DEFAULT 'TRY',
+  stock_policy ENUM('track_keys','unlimited') NOT NULL DEFAULT 'track_keys',
+  description TEXT,
+  tags JSON NULL,
+  highlights JSON NULL,
+  faq JSON NULL,
+  gallery JSON NULL,
+  cover_image VARCHAR(255) NULL,
+  status ENUM('active','draft','inactive') NOT NULL DEFAULT 'draft',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+  INDEX idx_products_category (category_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS product_keys (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  product_id INT UNSIGNED NOT NULL,
+  code VARBINARY(255) NOT NULL,
+  meta_json JSON NULL,
+  status ENUM('unused','used','refunded') NOT NULL DEFAULT 'unused',
+  order_item_id INT UNSIGNED NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  used_at TIMESTAMP NULL,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+  INDEX idx_keys_product (product_id,status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS product_accounts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  product_id INT UNSIGNED NOT NULL,
+  username VARBINARY(255) NOT NULL,
+  password_encrypted VARBINARY(255) NOT NULL,
+  meta_json JSON NULL,
+  status ENUM('unused','used','refunded') NOT NULL DEFAULT 'unused',
+  order_item_id INT UNSIGNED NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  used_at TIMESTAMP NULL,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+  INDEX idx_accounts_product (product_id,status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS coupons (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(50) NOT NULL UNIQUE,
+  type ENUM('percent','fixed') NOT NULL,
+  value DECIMAL(10,2) NOT NULL,
+  max_uses INT DEFAULT 0,
+  used_count INT DEFAULT 0,
+  min_subtotal DECIMAL(12,2) DEFAULT 0,
+  max_discount DECIMAL(12,2) DEFAULT 0,
+  per_user_limit INT DEFAULT 0,
+  starts_at DATETIME NULL,
+  ends_at DATETIME NULL,
+  status ENUM('active','inactive') NOT NULL DEFAULT 'active'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS carts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL,
+  session_id VARCHAR(120) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_cart_session (session_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS cart_items (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  cart_id INT UNSIGNED NOT NULL,
+  product_id INT UNSIGNED NOT NULL,
+  qty INT NOT NULL,
+  unit_price DECIMAL(12,2) NOT NULL,
+  total_price DECIMAL(12,2) NOT NULL,
+  FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS orders (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  order_no VARCHAR(40) NOT NULL UNIQUE,
+  user_id INT UNSIGNED NULL,
+  email VARCHAR(160) NOT NULL,
+  phone VARCHAR(32) NULL,
+  subtotal DECIMAL(12,2) NOT NULL DEFAULT 0,
+  discount_total DECIMAL(12,2) NOT NULL DEFAULT 0,
+  tax_total DECIMAL(12,2) NOT NULL DEFAULT 0,
+  grand_total DECIMAL(12,2) NOT NULL DEFAULT 0,
+  currency CHAR(3) NOT NULL DEFAULT 'TRY',
+  payment_method VARCHAR(60) NOT NULL,
+  payment_status ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
+  status ENUM('new','processing','completed','cancelled') NOT NULL DEFAULT 'new',
+  ip VARCHAR(45) NULL,
+  user_agent VARCHAR(255) NULL,
+  coupon_code VARCHAR(80) NULL,
+  coupon_discount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  paid_at TIMESTAMP NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_orders_user (user_id),
+  INDEX idx_orders_coupon (coupon_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  order_id INT UNSIGNED NOT NULL,
+  product_id INT UNSIGNED NOT NULL,
+  qty INT NOT NULL,
+  unit_price DECIMAL(12,2) NOT NULL,
+  total_price DECIMAL(12,2) NOT NULL,
+  delivery_payload JSON NULL,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS payments (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  order_id INT UNSIGNED NOT NULL,
+  provider VARCHAR(60) NOT NULL,
+  provider_txn_id VARCHAR(120) NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  currency CHAR(3) NOT NULL,
+  status ENUM('success','failed','pending') NOT NULL,
+  raw_response_json JSON NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS wallets (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL UNIQUE,
+  balance DECIMAL(12,2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS wallet_transactions (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  wallet_id INT UNSIGNED NOT NULL,
+  type ENUM('credit','debit') NOT NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  note VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS tickets (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  subject VARCHAR(180) NOT NULL,
+  status ENUM('open','answered','closed') NOT NULL DEFAULT 'open',
+  priority ENUM('low','normal','high') NOT NULL DEFAULT 'normal',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ticket_messages (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ticket_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NULL,
+  message TEXT NOT NULL,
+  attachments_json JSON NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS settings (
+  `key` VARCHAR(120) PRIMARY KEY,
+  `value` TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS logs (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL,
+  action VARCHAR(120) NOT NULL,
+  entity VARCHAR(120) NULL,
+  entity_id INT UNSIGNED NULL,
+  ip VARCHAR(45) NULL,
+  user_agent VARCHAR(255) NULL,
+  details JSON NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS login_logs (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NULL,
+  email VARCHAR(160) NOT NULL,
+  ip VARCHAR(45) NULL,
+  user_agent VARCHAR(255) NULL,
+  status ENUM('success','failed') NOT NULL DEFAULT 'failed',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_login_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS blocked_ips (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ip VARCHAR(45) NOT NULL UNIQUE,
+  reason VARCHAR(255) NULL,
+  expires_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS webhook_logs (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  provider VARCHAR(80) NOT NULL,
+  reference VARCHAR(120) NULL,
+  payload JSON NULL,
+  signature_valid TINYINT(1) NOT NULL DEFAULT 0,
+  processed_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_webhook_provider (provider)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS failed_logins (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(160) NOT NULL,
+  ip VARCHAR(45) NOT NULL,
+  attempts INT NOT NULL DEFAULT 0,
+  locked_until DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_failed_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS password_resets (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(160) NOT NULL,
+  token VARCHAR(120) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_resets_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS email_verifications (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  token VARCHAR(120) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+SET FOREIGN_KEY_CHECKS=1;
